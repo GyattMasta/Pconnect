@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Stream</title>
+    <style>
+        /* Set the full-page background */
+        body {
+            margin: 0;
+            height: 100vh;
+            background: url('IMG_0003.jpeg') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-shadow: 2px 2px 4px black;
+        }
+
+        #container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        #authCode {
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        #connect {
+            padding: 10px 20px;
+            margin-top: 10px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #connect:hover {
+            background-color: #45a049;
+        }
+
+        #message {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        #gameStream {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Connect to Your Game</h1>
+        <input type="text" id="authCode" placeholder="Enter Authentication Code" />
+        <br />
+        <button id="connect">Connect</button>
+        <p id="message"></p>
+    </div>
+    <video id="gameStream" autoplay></video>
+
+    <script>
+        const connectButton = document.getElementById('connect');
+        const authCodeInput = document.getElementById('authCode');
+        const gameStream = document.getElementById('gameStream');
+        const container = document.getElementById('container');
+        const message = document.getElementById('message');
+
+        let ws; // WebSocket instance
+
+        connectButton.addEventListener('click', () => {
+            const authCode = authCodeInput.value;
+            if (!authCode) {
+                message.textContent = "Please enter an authentication code.";
+                message.style.color = "red";
+                return;
+            }
+
+            ws = new WebSocket('ws://localhost:8765'); // Replace with your actual server address
+
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'auth', code: authCode }));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'status') {
+                    if (data.message === 'authenticated') {
+                        message.textContent = "Authentication successful!";
+                        message.style.color = "green";
+
+                        // Enter fullscreen mode
+                        container.style.display = 'none';
+                        gameStream.style.display = 'block';
+                        if (gameStream.requestFullscreen) {
+                            gameStream.requestFullscreen();
+                        } else if (gameStream.webkitRequestFullscreen) { // Safari support
+                            gameStream.webkitRequestFullscreen();
+                        } else if (gameStream.mozRequestFullScreen) { // Firefox support
+                            gameStream.mozRequestFullScreen();
+                        } else if (gameStream.msRequestFullscreen) { // IE/Edge support
+                            gameStream.msRequestFullscreen();
+                        }
+                    } else if (data.message === 'authentication failed') {
+                        message.textContent = "Invalid authentication code.";
+                        message.style.color = "red";
+                    }
+                }
+            };
+
+            ws.onerror = () => {
+                message.textContent = "Unable to connect to the server.";
+                message.style.color = "red";
+            };
+        });
+    </script>
+</body>
+</html>
