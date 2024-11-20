@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Stream</title>
+    <style>
+        #gameStream {
+            width: 100%;
+            height: 90vh;
+            background-color: black;
+        }
+        #connectForm {
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Connect to Your Game</h1>
+    <div id="connectForm">
+        <input type="text" id="authCode" placeholder="Enter Authentication Code" />
+        <button id="connect">Connect</button>
+    </div>
+    <video id="gameStream" autoplay></video>
+    
+    <script>
+        const connectButton = document.getElementById('connect');
+        const authCodeInput = document.getElementById('authCode');
+        const gameStream = document.getElementById('gameStream');
+        
+        // WebSocket connection
+        let ws;
+
+        connectButton.addEventListener('click', () => {
+            const authCode = authCodeInput.value;
+            if (authCode) {
+                ws = new WebSocket('ws://localhost:8765');  // Replace with your IP address or public IP
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: 'auth', code: authCode }));
+                };
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'status' && data.message === 'authenticated') {
+                        alert('Authentication successful!');
+                    } else if (data.type === 'status' && data.message === 'authentication failed') {
+                        alert('Invalid authentication code!');
+                    } else if (data.type === 'video') {
+                        const stream = new Blob([data.stream], { type: 'video/webm' });
+                        gameStream.src = URL.createObjectURL(stream);
+                    }
+                };
+            } else {
+                alert("Please enter an authentication code!");
+            }
+        });
+
+        // Capture keyboard input
+        document.addEventListener('keydown', (event) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'input',
+                    key: event.key
+                }));
+            }
+        });
+    </script>
+</body>
+</html>
